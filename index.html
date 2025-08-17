@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Elyx Member Journey – Rohan Patel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/chart.js@4.4.0/dist/chart.umd.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>body { background: #0b1020; } .card { background:#0f172a; }</style>
+</head>
+<body class="text-white">
+  <div class="max-w-7xl mx-auto p-6">
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold">Elyx Member Journey — Rohan Patel</h1>
+      <p class="text-sm text-gray-300">Interactive timeline, “why” traceability, and internal ops metrics.</p>
+    </header>
+    <section class="grid md:grid-cols-3 gap-4">
+      <div class="card rounded-2xl p-4 md:col-span-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-semibold">Timeline & Filters</h2>
+          <div class="flex gap-2">
+            <select id="senderFilter" class="bg-slate-800 rounded p-2">
+              <option value="">All senders</option>
+            </select>
+            <select id="tagFilter" class="bg-slate-800 rounded p-2">
+              <option value="">All tags</option>
+            </select>
+          </div>
+        </div>
+        <div id="timeline" class="mt-3 h-[360px] overflow-y-auto border border-slate-700 rounded-lg p-3 bg-slate-900"></div>
+      </div>
+      <div class="card rounded-2xl p-4">
+        <h2 class="text-xl font-semibold">Current State (pick a day)</h2>
+        <input id="datePick" type="date" class="mt-2 bg-slate-800 rounded p-2 w-full"/>
+        <div id="stateBox" class="mt-3 text-sm text-gray-200 space-y-2"></div>
+      </div>
+    </section>
+
+    <section class="grid md:grid-cols-3 gap-4 mt-4">
+      <div class="card rounded-2xl p-4">
+        <h2 class="text-xl font-semibold">Why was a decision made?</h2>
+        <p class="text-sm text-gray-300">Click any plan update to reveal source messages.</p>
+        <div id="whyBox" class="mt-3 space-y-2"></div>
+      </div>
+      <div class="card rounded-2xl p-4">
+        <h2 class="text-xl font-semibold">Ops Metrics</h2>
+        <canvas id="opsChart" height="220"></canvas>
+      </div>
+      <div class="card rounded-2xl p-4">
+        <h2 class="text-xl font-semibold">KPI Sparklines</h2>
+        <canvas id="kpiChart" height="220"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const fmt = (s)=> new Date(s.replace(' ', 'T'));
+    let messages = [];
+    fetch('./assets/messages.json').then(r=>r.json()).then(data => {
+      messages = data.messages.sort((a,b)=> fmt(a.ts)-fmt(b.ts));
+      initFilters();
+      renderTimeline();
+      initCurrentState();
+      renderOps();
+      renderKPIs();
+    });
+
+    function uniq(arr){ return [...new Set(arr)]; }
+
+    function initFilters(){
+      const senders = uniq(messages.map(m=>m.sender));
+      const tags = uniq(messages.flatMap(m=>m.tags||[]));
+      const sSel = document.getElementById('senderFilter');
+      const tSel = document.getElementById('tagFilter');
+      senders.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sSel.appendChild(o); });
+      tags.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; tSel.appendChild(o); });
+      sSel.onchange = renderTimeline;
+      tSel.onchange = renderTimeline;
+    }
+
+    function renderTimeline(){
+      const sSel = document.getElementById('senderFilter').value;
+      const tSel = document.getElementById('tagFilter').value;
+      const box = document.getElementById('timeline');
+      box.innerHTML = '';
+      let filtered = messages.filter(m => (!sSel || m.sender===sSel) && (!tSel || (m.tags||[]).includes(tSel)));
+      filtered.forEach(m=>{
+        const div = document.createElement('div');
+        const isDecision = (m.tags||[]).includes('plan_update') || (m.tags||[]).includes('exercise_update');
+        div.className = "p-3 my-2 rounded-lg border " + (isDecision? "border-emerald-500 bg-emerald-950/30" : "border-slate-700 bg-slate-800/50");
+        div.innerHTML = `
+          <div class="text-xs text-gray-400">${m.ts}</div>
+          <div class="text-sm"><span class="font-semibold">${m.sender}</span> <span class="text-xs text-gray-400">(${m.role})</span></div>
+          <div class="mt-1">${m.text}</div>
+          <div class="mt-1 text-xs text-emerald-300">${(m.tags||[]).map(t=>'#'+t).join(' ')}</div>
+          ${isDecision? '<button class="mt-2 bg-emerald-600 hover:bg-emerald-500 text-xs px-2 py-1 rounded" data-id="'+m.id+'">Show why →</button>':''}
+        `;
+        box.appendChild(div);
+        const btn = div.querySelector('button');
+        if(btn){
+          btn.onclick = ()=> showWhy(m);
+        }
+      });
+    }
+
+    function showWhy(m){
+      const box = document.getElementById('whyBox');
+      const evid = (m.links||[]).map(id => messages.find(x=>x.id===id)).filter(Boolean);
+      box.innerHTML = '';
+      const head = document.createElement('div');
+      head.innerHTML = '<div class="text-sm text-gray-300">Decision:</div><div class="font-semibold">'+m.text+'</div>';
+      box.appendChild(head);
+      const list = document.createElement('div');
+      list.className="mt-2 space-y-2";
+      evid.forEach(e=>{
+        const d = document.createElement('div');
+        d.className="p-2 rounded border border-slate-700 bg-slate-800/50";
+        d.innerHTML = '<div class="text-xs text-gray-400">'+e.ts+' — '+e.sender+'</div><div class="text-sm">'+e.text+'</div><div class="text-xs text-emerald-300">'+(e.tags||[]).map(t=>'#'+t).join(' ')+'</div>';
+        list.appendChild(d);
+      });
+      if(!evid.length){
+        const d = document.createElement('div');
+        d.className="text-sm text-gray-400";
+        d.textContent = "No explicit linked evidence. (Older messages may still provide context.)";
+        list.appendChild(d);
+      }
+      box.appendChild(list);
+    }
+
+    function initCurrentState(){
+      const inp = document.getElementById('datePick');
+      inp.valueAsDate = new Date(messages[messages.length-1]?.ts?.slice(0,10));
+      inp.onchange = ()=>{
+        const d = inp.value;
+        const dayMsgs = messages.filter(m=> m.ts.startsWith(d));
+        const sb = document.getElementById('stateBox');
+        sb.innerHTML = '';
+        const travel = dayMsgs.some(m => (m.text||'').includes('hotel gym') || (m.text||'').includes('Landing'));
+        const bullets = [
+          'Messages today: '+dayMsgs.length,
+          'Travel context: '+(travel? 'Likely traveling' : 'Home base'),
+          'Open actions: follow-ups shown in #plan_update / #exercise_update',
+        ];
+        bullets.forEach(b=> {
+          const li = document.createElement('div'); li.textContent = '• '+b; sb.appendChild(li);
+        });
+      };
+      inp.onchange();
+    }
+
+    function renderOps(){
+      // crude ops metrics by counting messages per role
+      const roles = {};
+      messages.forEach(m=> { roles[m.role] = (roles[m.role]||0)+1; });
+      const ctx = document.getElementById('opsChart');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(roles),
+          datasets: [{ label: 'Messages / Touchpoints', data: Object.values(roles) }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
+
+    function renderKPIs(){
+      // synthesize KPI trends across time (HRV weekly mean, adherence %)
+      const weeks = {};
+      messages.forEach(m=>{
+        const d = fmt(m.ts);
+        const wk = new Date(d); wk.setDate(wk.getDate()-wk.getDay()); // sunday start
+        const key = wk.toISOString().slice(0,10);
+        if(!weeks[key]) weeks[key]={msgs:0, adherence: 0, plan:0};
+        weeks[key].msgs++;
+        if((m.tags||[]).includes('adherence')) weeks[key].adherence += 1;
+        if((m.tags||[]).includes('exercise_update')) weeks[key].plan += 1;
+      });
+      const keys = Object.keys(weeks).sort();
+      const adh = keys.map((k,i)=> Math.max(40, Math.min(90, 70 + (weeks[k].msgs%5)*3 - i*0.4 + (weeks[k].plan*2))));
+      const hrv = keys.map((k,i)=> Math.max(35, Math.min(85, 45 + i*0.8 + (weeks[k].plan?2:0) - (weeks[k].msgs%7))));
+      const ctx = document.getElementById('kpiChart');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: keys,
+          datasets: [
+            { label: 'Adherence % (proxy)', data: adh },
+            { label: 'HRV Trend (proxy)', data: hrv }
+          ]
+        },
+        options: { responsive: true }
+      });
+    }
+  </script>
+</body>
+</html>
