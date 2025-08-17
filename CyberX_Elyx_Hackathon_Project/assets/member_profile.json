@@ -1,0 +1,75 @@
+{
+  "member": {
+    "name": "Rohan Patel",
+    "dob": "1979-03-12",
+    "age": 46,
+    "gender": "Male",
+    "primary_residence": "Singapore",
+    "frequent_travel_hubs": [
+      "United Kingdom",
+      "United States",
+      "South Korea",
+      "Jakarta"
+    ],
+    "occupation": "Regional Head of Sales (FinTech)",
+    "personal_assistant": "Sarah Tan",
+    "goals": [
+      {
+        "goal": "Maintain healthy cholesterol and BP to reduce heart disease risk",
+        "target_date": "2026-12-31"
+      },
+      {
+        "goal": "Enhance cognitive function/focus for sustained performance",
+        "target_date": "2026-06-30"
+      },
+      {
+        "goal": "Implement annual full-body screenings",
+        "target_date": "2025-11-01"
+      }
+    ],
+    "success_metrics": [
+      "cholesterol markers (ApoB, LDL-C)",
+      "blood pressure",
+      "inflammatory markers (hs-CRP)",
+      "sleep quality",
+      "stress resilience (HRV)",
+      "cognitive scores"
+    ],
+    "wearables": [
+      "Garmin"
+    ],
+    "conditions": [
+      "Borderline hypertension"
+    ]
+  },
+  "team": [
+    {
+      "name": "Ruby",
+      "role": "Concierge / Orchestrator"
+    },
+    {
+      "name": "Dr. Warren",
+      "role": "Medical Strategist"
+    },
+    {
+      "name": "Advik",
+      "role": "Performance Scientist"
+    },
+    {
+      "name": "Carla",
+      "role": "Nutritionist"
+    },
+    {
+      "name": "Rachel",
+      "role": "Physiotherapist"
+    },
+    {
+      "name": "Neel",
+      "role": "Concierge Lead"
+    },
+    {
+      "name": "Sarah Tan",
+      "role": "PA to Rohan"
+    }
+  ]
+}
