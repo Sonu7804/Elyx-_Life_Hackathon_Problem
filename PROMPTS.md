@@ -1,27 +1,56 @@
-# Prompts / Instructions Used
+# CyberX — Hackathon Prompts
 
-1) Conversation generation rubric:
-- Persona: Analytical, time-constrained executive; expects evidence.
-- Channels: WhatsApp-like tone; PA (Sarah Tan) used for scheduling.
-- Constraints enforced:
-  - Diagnostics every 3 months (fasting reminders, results + plan updates).
-  - Exercise updates every 2 weeks — Rachel adjusts based on travel fatigue & data.
-  - Member-initiated: 2–5 messages per week on average.
-  - Travel: 1 week out of every 4; hotel-gym modifications & jet-lag protocols.
-  - Adherence ~50% → Neel sends prioritization pivots.
-  - Chronic condition: borderline hypertension (BP check-ins & dietary sodium strategies).
-  - Wearables: Garmin initially; (optionally Oura) trend callouts tied to sleep/stress.
+This file contains the exact prompts we used to generate the dataset and video narration with the help of an LLM.
 
-2) “Why” traceability:
-- Every plan update links back to recent evidence: diagnostics, BP notes, sleep/HRV, travel context.
+---
 
-3) Visualization requirements:
-- Timeline with filters (by sender/tag).
-- Clickable *decision* cards (#plan_update / #exercise_update) → reveal evidence chain.
-- Current state panel by date.
-- Internal ops metrics: message counts by role; weekly adherence proxy & HRV proxy sparkline.
+## 1. Dataset Generation Prompt
 
-4) Guardrails:
-- Keep clinical phrasing general; no medical diagnosis beyond brief.
-- Focus on rationale and behavior change hooks.
+```
+You are tasked to generate a realistic WhatsApp-style health management dataset.  
+
+Persona:
+- Member: Rohan Patel, 46, Regional Sales Head, travels often.
+- Health condition: Borderline hypertension.
+- Support team: Doctor, Nutritionist, Physiotherapist, Concierge, Performance Scientist, and PA (Sarah).
+
+Constraints (MUST follow):
+- Duration: 8 months.
+- Frequency: 2–5 messages per week.
+- Diagnostics: Once every 3 months.
+- Exercise updates: Every 2 weeks.
+- Travel: 1 week out of every 4 (include adjustments in plan).
+- Adherence: Around 50% (half of assigned actions are missed).
+- Communication style: Short WhatsApp-like messages.
+
+Format (JSON):
+[
+  {
+    "id": 1,
+    "ts": "2025-01-15 09:00",
+    "sender": "Rohan Patel",
+    "role": "Member",
+    "text": "BP today was 136/84.",
+    "tags": ["bp"],
+    "links": [],
+    "initiated_by": "member"
+  },
+  {
+    "id": 2,
+    "ts": "2025-01-15 11:30",
+    "sender": "Dr. Warren",
+    "role": "Medical Strategist",
+    "text": "Plan update: reduce salt intake and add one Zone2 session this week.",
+    "tags": ["plan_update"],
+    "links": [1],
+    "initiated_by": "elyx"
+  }
+]
+
+Guidelines:
+- Use short, natural chat-like sentences.
+- Ensure decisions (green cards) always have links to supporting messages (Why-traceability).
+- Spread data across 8 months with realistic timestamps.
+- Mix successful adherence and missed actions.
+```
 
